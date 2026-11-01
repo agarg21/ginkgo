@@ -29,9 +29,32 @@ jobs:
         os: ${{ fromJSON(inputs.full && '["windows-2022", "windows-latest"]' || '["windows-latest"]') }}
     name: msvc/${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    env:
+      # compiled objects are cached between runs, see the ccache steps
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_MAXSIZE: 2G
     steps:
     - name: Checkout the latest code (shallow clone)
       uses: actions/checkout@v7
+
+    # restores the cache of this branch or, as a fallback, of any branch
+    # (e.g. develop for a new pull request)
+    - name: restore ccache
+      uses: actions/cache/restore@v6
+      with:
+        path: .ccache
+        key: ccache-windows-msvc-${{ matrix.os }}-${{ github.ref_name }}-${{ github.run_id }}
+        restore-keys: |
+          ccache-windows-msvc-${{ matrix.os }}-${{ github.ref_name }}-
+          ccache-windows-msvc-${{ matrix.os }}-
+
+    - name: setup ccache and ninja
+      run: choco install ccache ninja -y --no-progress
+
+    # puts cl.exe on the PATH, needed by the Ninja generator
+    - name: setup MSVC environment
+      uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
     - name: Debug over SSH (tmate)
       uses: mxschmitt/action-tmate@35b54afac29c97fb54faba5b513f8fbd1882f113 # v3.24
       if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled }}
@@ -45,6 +68,16 @@ jobs:
         refreshenv
         mkdir build
         cd build
-        cmake -DGINKGO_BUILD_OMP=OFF -DGINKGO_ENABLE_HALF=OFF -DGINKGO_ENABLE_BFLOAT16=OFF ..
-        cmake --build . -j4 --config Release
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DGINKGO_BUILD_OMP=OFF -DGINKGO_ENABLE_HALF=OFF -DGINKGO_ENABLE_BFLOAT16=OFF ..
+        ccache --zero-stats
+        cmake --build . -j4
+        ccache --show-stats
         ctest . -C Release
+
+    # saved even if the build fails, so the next run is faster
+    - name: save ccache
+      if: always()
+      uses: actions/cache/save@v6
+      with:
+        path: .ccache
+        key: ccache-windows-msvc-${{ matrix.os }}-${{ github.ref_name }}-${{ github.run_id }}
