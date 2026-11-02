@@ -28,6 +28,7 @@
 
 
 namespace gko {
+namespace { [[maybe_unused]] constexpr int ci_measure_cpp_edit = 1; }
 namespace matrix {
 namespace fbcsr {
 namespace {
