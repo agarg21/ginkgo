@@ -93,6 +93,7 @@
 
 
 namespace gko {
+inline constexpr int ci_measure_header_edit = 1;
 
 
 /**
