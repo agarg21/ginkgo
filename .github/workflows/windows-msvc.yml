@@ -44,10 +44,10 @@ jobs:
       uses: actions/cache/restore@v6
       with:
         path: .ccache
-        key: ccache-windows-msvc-${{ matrix.os }}-${{ github.ref_name }}-${{ github.run_id }}
+        key: ccache-windows-msvc-cl-${{ matrix.os }}-${{ github.ref_name }}-${{ github.run_id }}
         restore-keys: |
-          ccache-windows-msvc-${{ matrix.os }}-${{ github.ref_name }}-
-          ccache-windows-msvc-${{ matrix.os }}-
+          ccache-windows-msvc-cl-${{ matrix.os }}-${{ github.ref_name }}-
+          ccache-windows-msvc-cl-${{ matrix.os }}-
 
     - name: setup ccache and ninja
       run: choco install ccache ninja -y --no-progress
@@ -68,7 +68,7 @@ jobs:
         refreshenv
         mkdir build
         cd build
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DGINKGO_BUILD_OMP=OFF -DGINKGO_ENABLE_HALF=OFF -DGINKGO_ENABLE_BFLOAT16=OFF ..
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DGINKGO_BUILD_OMP=OFF -DGINKGO_ENABLE_HALF=OFF -DGINKGO_ENABLE_BFLOAT16=OFF ..
         ccache --zero-stats
         cmake --build . -j4
         ccache --show-stats
@@ -80,4 +80,4 @@ jobs:
       uses: actions/cache/save@v6
       with:
         path: .ccache
-        key: ccache-windows-msvc-${{ matrix.os }}-${{ github.ref_name }}-${{ github.run_id }}
+        key: ccache-windows-msvc-cl-${{ matrix.os }}-${{ github.ref_name }}-${{ github.run_id }}
